@@ -22,6 +22,7 @@ app.use(
 );
 
 const passport = require("./middleware/passport");
+const { ensureAuthenticated } = require("./middleware/checkAuth");
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -31,18 +32,33 @@ app.use(ejsLayouts);
 
 app.set("view engine", "ejs");
 
+app.use((req, res, next) => {
+  if (req.user) {
+    res.locals.isLoggedIn = true;
+  } else {
+    res.locals.isLoggedIn = false;
+  }
+  next();
+})
+
 // Routes start here
 
-app.get("/reminders", reminderController.list);
+app.get("/reminders", ensureAuthenticated, reminderController.list);
 
-app.get("/reminder/new", reminderController.new);
+app.get("/reminder/new", ensureAuthenticated, reminderController.new);
 
-app.get("/reminder/:id", reminderController.listOne);
+app.get("/reminder/:id", ensureAuthenticated, reminderController.listOne);
 
-app.get("/reminder/:id/edit", reminderController.edit);
+app.get("/reminder/:id/edit", ensureAuthenticated, reminderController.edit);
 
 app.get("/login", (req, res) => res.render("login"))
 
+app.get('/logout', function(req, res, next){
+  req.logout(function(err) {
+    if (err) { return next(err); }
+    res.redirect('/');
+  });
+});
 
 app.post("/login", passport.authenticate("local", {
     successRedirect: "/reminders",
